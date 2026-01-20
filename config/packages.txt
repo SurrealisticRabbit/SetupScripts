@@ -1,0 +1,16 @@
+base
+linux
+linux-firmware
+base-devel
+btrfs-progs
+refind
+zsh
+fish
+bash-completion
+vim
+git
+networkmanager
+intel-ucode
+amd-ucode
+man-db
+man-pages
