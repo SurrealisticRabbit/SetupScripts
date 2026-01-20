@@ -8,7 +8,7 @@ export EFI_PARTITION="/dev/sda1"
 export ROOT_PARTITION="/dev/sda2"
 
 # User settings
-export HOSTNAME="ducky-arch"
+export HOSTNAME="ducky"
 export USERNAME="ducky"
 export USER_PASSWORD="your_password"
 export ROOT_PASSWORD="your_root_password"
