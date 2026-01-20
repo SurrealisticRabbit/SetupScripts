@@ -24,20 +24,24 @@ umount /mnt
 
 # --- 3. MOUNTING ---
 mount -o compress=zstd:1,noatime,subvol=@ "$ROOT_PARTITION" /mnt
-mkdir -p /mnt/{boot,home,.snapshots}
+mkdir -p /mnt/{boot,home,.snapshots,etc}
 mount -o compress=zstd:1,noatime,subvol=@home "$ROOT_PARTITION" /mnt/home
 mount -o compress=zstd:1,noatime,subvol=@snapshots "$ROOT_PARTITION" /mnt/.snapshots
 mount "$EFI_PARTITION" /mnt/boot
 
-# --- 4. INSTALLATION ---
+# --- 4. PRE-INSTALL CONFIGURATION ---
+echo "LANG=en_GB.UTF-8" > /mnt/etc/locale.conf
+echo "KEYMAP=uk" > /mnt/etc/vconsole.conf
+
+# --- 5. INSTALLATION ---
 pacstrap /mnt base linux linux-firmware base-devel btrfs-progs refind \
     zsh fish bash-completion vim git networkmanager \
     intel-ucode amd-ucode man-db man-pages
 
-# --- 5. SYSTEM CONFIGURATION ---
+# --- 6. SYSTEM CONFIGURATION ---
 genfstab -U /mnt >> /mnt/etc/fstab
 
-# --- 6. INTERNAL SCRIPT GENERATION ---
+# --- 7. INTERNAL SCRIPT GENERATION ---
 cat << EOF > /mnt/setup_internal.sh
 #!/bin/bash
 set -e
@@ -47,12 +51,11 @@ ln -sf /usr/share/zoneinfo/America/Edmonton /etc/localtime
 hwclock --systohc
 sed -i 's/#en_GB.UTF-8/en_GB.UTF-8/' /etc/locale.gen
 locale-gen
-echo "LANG=en_GB.UTF-8" > /etc/locale.conf
-echo "KEYMAP=uk" > /etc/vconsole.conf
 echo "$HOSTNAME" > /etc/hostname
 
 ### NETWORK
 systemctl enable NetworkManager
+systemctl start NetworkManager
 if [ -n "$WIFI_SSID" ] && [ -n "$WIFI_PASSWORD" ]; then
     nmcli dev wifi connect "$WIFI_SSID" password "$WIFI_PASSWORD"
 fi
@@ -91,12 +94,12 @@ HOOK
 
 EOF
 
-# --- 7. CHROOT EXECUTION ---
+# --- 8. CHROOT EXECUTION ---
 chmod +x /mnt/setup_internal.sh
 arch-chroot /mnt /setup_internal.sh
 rm /mnt/setup_internal.sh
 
-# --- 8. FINISH ---
+# --- 9. FINISH ---
 echo ">> Installation Complete. Rebooting in 5s..."
 sleep 5
 umount -R /mnt
