@@ -39,6 +39,17 @@ sed -i 's/# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 ### BOOTLOADER (REFIND)
 refind-install
 
+# Create refind_linux.conf with BTRFS subvolume flags
+UCODE=""
+if [ -f /boot/intel-ucode.img ]; then
+    UCODE="initrd=intel-ucode.img"
+elif [ -f /boot/amd-ucode.img ]; then
+    UCODE="initrd=amd-ucode.img"
+fi
+
+echo "\"DuckyOS\" \"root=UUID=$(blkid -s UUID -o value $ROOT_PARTITION) rw rootflags=subvol=@ \$UCODE initrd=initramfs-linux.img\"" > /boot/refind_linux.conf
+echo "\"DuckyOSFallback\" \"root=UUID=$(blkid -s UUID -o value $ROOT_PARTITION) rw rootflags=subvol=@ \$UCODE initrd=initramfs-linux-fallback.img\"" >> /boot/refind_linux.conf
+
 mkdir -p /etc/pacman.d/hooks
 cat << 'HOOK' > /etc/pacman.d/hooks/refind.hook
 [Trigger]
