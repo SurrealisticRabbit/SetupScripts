@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Ensure you are running as root
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run as root"
+    exit 1
+fi
+
 # Source the functions
 source scripts/functions.sh
 

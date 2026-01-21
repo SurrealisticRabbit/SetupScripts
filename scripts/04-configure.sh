@@ -4,70 +4,28 @@ set -e
 source config/variables.sh
 
 # --- 7. INTERNAL SCRIPT GENERATION ---
-cat << EOF > /mnt/setup_internal.sh
-#!/bin/bash
-set -e
+# Prepare chroot environment resources
+mkdir -p /mnt/tmp/install_config
 
-# Source variables
-$(cat config/variables.sh)
+cp config/variables.sh /mnt/tmp/install_config/
+# Append current runtime variables to the chroot config to ensure overrides (like from VM20G.sh) are respected
+cat <<EOF >> /mnt/tmp/install_config/variables.sh
 
-### TIMEZONE & LOCALE
-ln -sf /usr/share/zoneinfo/America/Edmonton /etc/localtime
-hwclock --systohc
-sed -i 's/#en_GB.UTF-8/en_GB.UTF-8/' /etc/locale.gen
-locale-gen
-echo "\$HOSTNAME" > /etc/hostname
-
-### NETWORK
-systemctl enable NetworkManager
-
-### SWAPFILE (BTRFS NO-COW)
-truncate -s 0 /swapfile
-chattr +C /swapfile
-dd if=/dev/zero of=/swapfile bs=1M count=4096 status=progress
-chmod 600 /swapfile
-mkswap /swapfile
-echo "/swapfile none swap defaults 0 0" >> /etc/fstab
-
-### USERS
-echo "root:\$ROOT_PASSWORD" | chpasswd
-useradd -m -G wheel -s /usr/bin/fish "\$USERNAME"
-echo "\$USERNAME:\$USER_PASSWORD" | chpasswd
-sed -i 's/# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
-
-### BOOTLOADER (REFIND)
-refind-install
-
-# Create refind_linux.conf with BTRFS subvolume flags
-UCODE=""
-if [ -f /boot/intel-ucode.img ]; then
-    UCODE="initrd=intel-ucode.img"
-elif [ -f /boot/amd-ucode.img ]; then
-    UCODE="initrd=amd-ucode.img"
-fi
-
-echo "\"DuckyOS\" \"root=UUID=$(blkid -s UUID -o value $ROOT_PARTITION) rw rootflags=subvol=@ \$UCODE initrd=initramfs-linux.img\"" > /boot/refind_linux.conf
-echo "\"DuckyOSFallback\" \"root=UUID=$(blkid -s UUID -o value $ROOT_PARTITION) rw rootflags=subvol=@ \$UCODE initrd=initramfs-linux-fallback.img\"" >> /boot/refind_linux.conf
-
-mkdir -p /etc/pacman.d/hooks
-cat << 'HOOK' > /etc/pacman.d/hooks/refind.hook
-[Trigger]
-Operation=Upgrade
-Type=Package
-Target=refind
-
-[Action]
-Description = Updating rEFInd on ESP
-When=PostTransaction
-Exec=/usr/bin/refind-install
-HOOK
-
+# --- Runtime Overrides ---
+export DISK="$DISK"
+export EFI_PARTITION="$EFI_PARTITION"
+export ROOT_PARTITION="$ROOT_PARTITION"
+export HOSTNAME="$HOSTNAME"
+export USERNAME="$USERNAME"
 EOF
 
+cp config/refind.hook /mnt/tmp/install_config/
+cp scripts/chroot_setup.sh /mnt/tmp/install_config/
+
 # --- 8. CHROOT EXECUTION ---
-chmod +x /mnt/setup_internal.sh
-arch-chroot /mnt /setup_internal.sh
-rm /mnt/setup_internal.sh
+chmod +x /mnt/tmp/install_config/chroot_setup.sh
+arch-chroot /mnt /tmp/install_config/chroot_setup.sh
+rm -rf /mnt/tmp/install_config
 
 # --- 9. FINISH ---
 echo ">> Installation Complete. Rebooting in 5s..."

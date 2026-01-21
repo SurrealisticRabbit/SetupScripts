@@ -1,12 +1,13 @@
 #!/bin/bash
+set -e
 
-# This script sets the variables and runs the installation.
+# --- Configuration for VM 20G ---
+export DISK="/dev/sda"
+export EFI_PARTITION="/dev/sda1"
+export ROOT_PARTITION="/dev/sda2"
+export HOSTNAME="ducky-vm"
 
-# Ensure you are running as root
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run as root"
-  exit
-fi
-
-# Run the main installation script
-bash install.sh
+# --- Execution ---
+echo "Press Enter to continue..."
+read
+./install.sh

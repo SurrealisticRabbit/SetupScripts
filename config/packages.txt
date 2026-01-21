@@ -4,7 +4,6 @@ linux-firmware
 base-devel
 btrfs-progs
 refind
-zsh
 fish
 bash-completion
 vim
